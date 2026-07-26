@@ -25,5 +25,5 @@ Plataforma para la gestión de eventos, donde los usuarios pueden:
 
 1. Clonar el repositorio:
 ```bash
-git clone <https://github.com/mateoburbano87-dot/Backend-II.git>
+git clone <https://github.com/mateoburbano87-dot/Backend-II.gitgit >
 cd event-platform-backend
