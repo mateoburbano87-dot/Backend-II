@@ -1,10 +1,10 @@
-# Event Platform Backend
+# Plataforma para eventos
 
-## 🎯 Descripción del Proyecto
+## Descripción del Proyecto
 
 Plataforma de Eventos e Inscripciones - Backend API desarrollada con Node.js y Express, siguiendo una arquitectura por capas para garantizar escalabilidad y mantenibilidad.
 
-## 🚀 Temática
+## Temática
 
 Plataforma para la gestión de eventos, donde los usuarios pueden:
 - Ver eventos disponibles
@@ -12,7 +12,7 @@ Plataforma para la gestión de eventos, donde los usuarios pueden:
 - Gestionar inscripciones
 - Administradores pueden crear y gestionar eventos
 
-## 🛠️ Tecnologías
+## Tecnologías
 
 - **Node.js** - Runtime JavaScript
 - **Express.js** - Framework web
@@ -21,9 +21,9 @@ Plataforma para la gestión de eventos, donde los usuarios pueden:
 - **dotenv** - Manejo de variables de entorno
 - **CORS** - Middleware para Cross-Origin Resource Sharing
 
-## 📦 Instalación
+## Instalación
 
 1. Clonar el repositorio:
 ```bash
-git clone <url-del-repositorio>
+git clone <https://github.com/mateoburbano87-dot/Backend-II.git>
 cd event-platform-backend
