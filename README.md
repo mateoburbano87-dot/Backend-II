@@ -21,9 +21,3 @@ Plataforma para la gestión de eventos, donde los usuarios pueden:
 - **dotenv** - Manejo de variables de entorno
 - **CORS** - Middleware para Cross-Origin Resource Sharing
 
-## Instalación
-
-1. Clonar el repositorio:
-```bash
-git clone <https://github.com/mateoburbano87-dot/Backend-II.gitgit >
-cd event-platform-backend
