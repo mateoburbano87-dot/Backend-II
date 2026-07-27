@@ -1,4 +1,4 @@
-// Servicio base para sesiones (sin autenticación aún)
+// Servicio base para sesiones 
 class SessionService {
   async login(credentials) {
     // Por ahora solo retorna un mensaje de que está en desarrollo
