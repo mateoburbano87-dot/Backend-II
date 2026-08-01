@@ -1,17 +1,20 @@
 import mongoose from 'mongoose';
+import ValidationHelper from '../utils/validationHelper.js';
 
 const userSchema = new mongoose.Schema({
-  firstName: {
+  first_name: {
     type: String,
     required: [true, 'El nombre es requerido'],
     trim: true,
     minlength: [2, 'El nombre debe tener al menos 2 caracteres'],
+    maxlength: [50, 'El nombre no puede exceder los 50 caracteres'],
   },
-  lastName: {
+  last_name: {
     type: String,
     required: [true, 'El apellido es requerido'],
     trim: true,
     minlength: [2, 'El apellido debe tener al menos 2 caracteres'],
+    maxlength: [50, 'El apellido no puede exceder los 50 caracteres'],
   },
   email: {
     type: String,
@@ -19,7 +22,7 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
     lowercase: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Email inválido'],
+    match: [/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/, 'Email inválido'],
   },
   password: {
     type: String,
@@ -28,12 +31,19 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin', 'organizer'],
+    enum: {
+      values: ['user', 'organizer', 'admin'],
+      message: 'Rol inválido. Debe ser: user, organizer o admin',
+    },
     default: 'user',
   },
   isActive: {
     type: Boolean,
     default: true,
+  },
+  lastLogin: {
+    type: Date,
+    default: null,
   },
   createdAt: {
     type: Date,
@@ -45,13 +55,45 @@ const userSchema = new mongoose.Schema({
   },
 }, {
   timestamps: true,
+  // Configuración para que toJSON elimine campos sensibles
+  toJSON: {
+    transform: function(doc, ret) {
+      delete ret.password;
+      delete ret.__v;
+      return ret;
+    },
+  },
+  toObject: {
+    transform: function(doc, ret) {
+      delete ret.password;
+      delete ret.__v;
+      return ret;
+    },
+  },
 });
 
-// Método para no enviar la contraseña en las respuestas
-userSchema.methods.toJSON = function() {
+// Middleware pre-save para normalizar email antes de guardar
+userSchema.pre('save', function(next) {
+  if (this.email) {
+    this.email = ValidationHelper.normalizeEmail(this.email);
+  }
+  this.updatedAt = Date.now();
+  next();
+});
+
+// Método para sanitizar datos del usuario (eliminar password)
+userSchema.methods.sanitize = function() {
   const user = this.toObject();
   delete user.password;
+  delete user.__v;
   return user;
+};
+
+// Método estático para verificar si email existe
+userSchema.statics.emailExists = async function(email) {
+  const normalizedEmail = ValidationHelper.normalizeEmail(email);
+  const user = await this.findOne({ email: normalizedEmail });
+  return !!user;
 };
 
 const User = mongoose.model('User', userSchema);

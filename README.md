@@ -1,4 +1,4 @@
-# Plataforma para eventos
+# Plataforma para Eventos
 
 ## Descripción del Proyecto
 
@@ -12,12 +12,13 @@ Plataforma para la gestión de eventos, donde los usuarios pueden:
 - Gestionar inscripciones
 - Administradores pueden crear y gestionar eventos
 
-## Tecnologías
+## 🛠️ Tecnologías
 
 - **Node.js** - Runtime JavaScript
 - **Express.js** - Framework web
 - **MongoDB** - Base de datos NoSQL
 - **Mongoose** - ODM para MongoDB
+- **bcryptjs** - Hashing de contraseñas
+- **jsonwebtoken** - JWT para autenticación
 - **dotenv** - Manejo de variables de entorno
 - **CORS** - Middleware para Cross-Origin Resource Sharing
-

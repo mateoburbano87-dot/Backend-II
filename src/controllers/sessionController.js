@@ -1,10 +1,60 @@
 import SessionService from '../services/sessionService.js';
+import ValidationHelper from '../utils/validationHelper.js';
 
 class SessionController {
+  async register(req, res) {
+    try {
+      const userData = req.body;
+      
+      // Intentar registrar el usuario
+      const result = await SessionService.register(userData);
+      
+      // Respuesta exitosa (201 Created)
+      res.status(201).json({
+        status: 'success',
+        payload: result,
+        message: 'Usuario registrado exitosamente',
+      });
+    } catch (error) {
+      // Manejar diferentes tipos de errores
+      const errorMessages = [
+        'Campos requeridos faltantes',
+        'Formato de email inválido',
+        'La contraseña debe tener al menos 6 caracteres',
+        'El email ya está registrado',
+        'Rol inválido',
+      ];
+      
+      // Verificar si el error es de validación (400 Bad Request)
+      if (errorMessages.some(msg => error.message.includes(msg))) {
+        return res.status(400).json({
+          status: 'error',
+          message: error.message,
+        });
+      }
+      
+      // Error de email duplicado (409 Conflict)
+      if (error.message === 'El email ya está registrado') {
+        return res.status(409).json({
+          status: 'error',
+          message: 'El email ya está registrado',
+        });
+      }
+      
+      // Error general del servidor (500)
+      console.error('Error en registro:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Error interno del servidor',
+      });
+    }
+  }
+
   async login(req, res) {
     try {
       const { email, password } = req.body;
       
+      // Validar campos requeridos para login
       if (!email || !password) {
         return res.status(400).json({
           status: 'error',
@@ -18,36 +68,6 @@ class SessionController {
         status: 'success',
         payload: result,
         message: 'Login en desarrollo',
-      });
-    } catch (error) {
-      res.status(500).json({
-        status: 'error',
-        message: error.message,
-      });
-    }
-  }
-
-  async register(req, res) {
-    try {
-      const userData = req.body;
-      
-      // Validaciones básicas
-      const requiredFields = ['firstName', 'lastName', 'email', 'password'];
-      const missingFields = requiredFields.filter(field => !userData[field]);
-      
-      if (missingFields.length > 0) {
-        return res.status(400).json({
-          status: 'error',
-          message: `Campos requeridos faltantes: ${missingFields.join(', ')}`,
-        });
-      }
-      
-      const result = await SessionService.register(userData);
-      
-      res.status(201).json({
-        status: 'success',
-        payload: result,
-        message: 'Registro en desarrollo',
       });
     } catch (error) {
       res.status(500).json({
