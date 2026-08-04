@@ -3,7 +3,7 @@ class ValidationHelper {
    * Valida que todos los campos requeridos estén presentes
    * @param {Object} data - Objeto con los datos a validar
    * @param {Array} requiredFields - Lista de campos requeridos
-   * @returns {Object} - { isValid: boolean, missingFields: Array }
+   * @returns {Object} - valid: true si todos los campos están presentes, false si faltan; missingFields: lista de campos faltantes
    */
   static validateRequiredFields(data, requiredFields) {
     const missingFields = requiredFields.filter(field => {
@@ -30,7 +30,7 @@ class ValidationHelper {
   /**
    * Valida la longitud mínima de una contraseña
    * @param {string} password - Contraseña a validar
-   * @param {number} minLength - Longitud mínima (default: 6)
+   * @param {number} minLength - Longitud mínima 6 digitos por defecto
    * @returns {boolean} - true si es válida, false si no
    */
   static validatePasswordLength(password, minLength = 6) {
@@ -38,7 +38,7 @@ class ValidationHelper {
   }
 
   /**
-   * Normaliza un email (trim + lowercase)
+   * Normaliza un email 
    * @param {string} email - Email a normalizar
    * @returns {string} - Email normalizado
    */

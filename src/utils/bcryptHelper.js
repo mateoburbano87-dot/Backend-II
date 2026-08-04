@@ -4,7 +4,7 @@ class BcryptHelper {
   /**
    * Hashea una contraseña usando bcrypt
    @param {string} password - Contraseña en texto plano
-   @param {number} saltRounds - Número de rondas de sal (default: 10)
+   @param {number} saltRounds - Número de rondas de sal por defecto 10
    @returns {Promise<string>} - Contraseña hasheada
    */ 
   static async hashPassword(password, saltRounds = 10) {
