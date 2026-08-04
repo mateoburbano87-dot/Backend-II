@@ -12,7 +12,7 @@ Plataforma para la gestión de eventos, donde los usuarios pueden:
 - Gestionar inscripciones
 - Administradores pueden crear y gestionar eventos
 
-## 🛠️ Tecnologías
+## Tecnologías
 
 - **Node.js** - Runtime JavaScript
 - **Express.js** - Framework web
