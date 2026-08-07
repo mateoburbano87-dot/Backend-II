@@ -12,12 +12,15 @@
     "express",
     "events",
     "platform",
-    "backend"
+    "backend",
+    "jwt",
+    "authentication"
   ],
   "author": "Tu Nombre",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",

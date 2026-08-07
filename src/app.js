@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import eventRoutes from './routes/eventRoutes.js';
 import sessionRoutes from './routes/sessionRoutes.js';
@@ -14,9 +15,13 @@ connectDB();
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true, // Permitir cookies en CORS
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser()); // Para manejar cookies
 
 // Ruta de health check
 app.get('/api/health', (req, res) => {

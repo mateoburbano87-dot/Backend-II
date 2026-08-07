@@ -73,3 +73,19 @@ export const normalizeEmail = (req, res, next) => {
   }
   next();
 };
+
+/**
+ * Middleware para validar campos de login
+ */
+export const validateLoginFields = (req, res, next) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Email y contraseña son requeridos',
+    });
+  }
+  
+  next();
+};
