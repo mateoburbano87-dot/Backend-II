@@ -1,63 +1,97 @@
+/**
+ * Middleware de autenticación usando Passport.js
+ */
+
+import passport from 'passport';
+import UserRepository from '../repositories/userRepository.js';
 import JwtHelper from '../utils/jwt.js';
 
 /**
- * Middleware de autenticación para proteger rutas
- * Verifica la presencia y validez del JWT
- * 
- * @param {Object} req - Objeto request de Express
- * @param {Object} res - Objeto response de Express
- * @param {Function} next - Función next de Express
+ * Middleware de autenticación con Passport (estrategia jwt)
+ * Verifica la cookie y autentica al usuario
  */
 export const auth = async (req, res, next) => {
   try {
-    // Extraer token de la cookie o header
-    const token = JwtHelper.extractToken(req);
-    
-    // Si no hay token, responder con 401
-    if (!token) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'No autenticado - Token no proporcionado',
-      });
-    }
+    // Usar la estrategia JWT de Passport
+    passport.authenticate('jwt', { session: false }, (err, user, info) => {
+      if (err) {
+        console.error('Error en auth middleware:', err);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Error interno del servidor',
+        });
+      }
 
-    // Verificar y decodificar el token
-    const decoded = JwtHelper.verifyToken(token);
-    
-    // Guardar la información del usuario en req.user para uso posterior
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      role: decoded.role,
-    };
-    
-    // Continuar con el siguiente middleware o controlador
-    next();
+      if (!user) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'No autenticado',
+        });
+      }
+
+      // Guardar usuario en req.user
+      req.user = {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        first_name: user.first_name,
+        last_name: user.last_name,
+      };
+
+      next();
+    })(req, res, next);
   } catch (error) {
-    // Manejar errores de token
-    let message = 'No autenticado';
-    
-    if (error.message === 'Token expirado') {
-      message = 'Sesión expirada - Inicie sesión nuevamente';
-    } else if (error.message === 'Token inválido') {
-      message = 'Token inválido';
-    }
-    
+    console.error('Error en auth:', error);
     return res.status(401).json({
       status: 'error',
-      message,
+      message: 'No autenticado',
     });
   }
 };
 
 /**
- * Middleware para verificar roles (opcional, para futuras entregas)
- * @param {Array} allowedRoles - Lista de roles permitidos
- * @returns {Function} - Middleware de Express
+ * Middleware de autenticación con estrategia desde header
+ * Para futuros usos con Bearer token
+ */
+export const authBearer = async (req, res, next) => {
+  try {
+    passport.authenticate('jwt-header', { session: false }, (err, user, info) => {
+      if (err) {
+        return res.status(500).json({
+          status: 'error',
+          message: 'Error interno del servidor',
+        });
+      }
+
+      if (!user) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Token inválido',
+        });
+      }
+
+      req.user = {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+      };
+
+      next();
+    })(req, res, next);
+  } catch (error) {
+    return res.status(401).json({
+      status: 'error',
+      message: 'No autenticado',
+    });
+  }
+};
+
+/**
+ * Middleware para verificar roles con Passport
+ * Requiere que el usuario esté autenticado primero
  */
 export const authorize = (allowedRoles) => {
   return (req, res, next) => {
-    // Verificar que req.user exista (debe pasar por auth primero)
     if (!req.user) {
       return res.status(401).json({
         status: 'error',
@@ -65,7 +99,6 @@ export const authorize = (allowedRoles) => {
       });
     }
 
-    // Verificar si el rol del usuario está permitido
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         status: 'error',
@@ -77,14 +110,8 @@ export const authorize = (allowedRoles) => {
   };
 };
 
-/**
- * Middleware opcional para logging de autenticación
- */
-export const authLogger = (req, res, next) => {
-  if (req.user) {
-    console.log(`[Auth] Usuario autenticado: ${req.user.email} (${req.user.role})`);
-  } else {
-    console.log('[Auth] Usuario no autenticado');
-  }
-  next();
+export default {
+  auth,
+  authBearer,
+  authorize,
 };
