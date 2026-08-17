@@ -28,5 +28,17 @@ Plataforma de Eventos e Inscripciones - Backend API desarrollada con Node.js y E
 | dotenv | Variables de entorno |
 | CORS | Cross-Origin Resource Sharing |
 
+## Autenticación con Passport.js
+
+### Estrategias Implementadas
+
+| Estrategia | Descripción | Estado |
+|------------|-------------|--------|
+| `register` | Registro de usuarios con validación y hash | ✅ Implementada |
+| `login` | Autenticación de usuarios con JWT | ✅ Implementada |
+| `jwt` | Verificación de JWT desde cookie | ✅ Implementada |
+| `jwt-header` | Verificación de JWT desde header | ✅ Preparada |
+| `google` | Autenticación con Google | 🚧 En desarrollo |
+| `github` | Autenticación con GitHub | 🚧 En desarrollo |
 
 
