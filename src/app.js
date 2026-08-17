@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import passport from 'passport';
+import './config/passport.config.js'; // Importar configuración de Passport
 import eventRoutes from './routes/eventRoutes.js';
 import sessionRoutes from './routes/sessionRoutes.js';
 import errorHandler from './middlewares/errorHandler.js';
@@ -17,11 +19,14 @@ const app = express();
 // Middlewares
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
-  credentials: true, // Permitir cookies en CORS
+  credentials: true,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser()); // Para manejar cookies
+app.use(cookieParser());
+
+// Inicializar Passport
+app.use(passport.initialize());
 
 // Ruta de health check
 app.get('/api/health', (req, res) => {
@@ -37,7 +42,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/events', eventRoutes);
 app.use('/api/sessions', sessionRoutes);
 
-// Manejador de errores (debe ir después de todas las rutas)
+// Manejador de errores
 app.use(errorHandler);
 
 // Manejo de rutas no encontradas
