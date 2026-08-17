@@ -1,51 +1,69 @@
+/**
+ * Maneja registro, login, logout y usuario actual
+ */
+
+import passport from 'passport';
 import SessionService from '../services/sessionService.js';
+import JwtHelper from '../utils/jwt.js';
 
 class SessionController {
   /**
-   * Registra un nuevo usuario
+   * Registra un nuevo usuario usando Passport
    * POST /api/sessions/register
    */
-  async register(req, res) {
+  async register(req, res, next) {
     try {
-      const userData = req.body;
-      
-      // Intentar registrar el usuario
-      const result = await SessionService.register(userData);
-      
-      // Respuesta exitosa (201 Created)
-      res.status(201).json({
-        status: 'success',
-        payload: result,
-        message: 'Usuario registrado exitosamente',
-      });
+      // Delegar en la estrategia register de Passport
+      passport.authenticate('register', { session: false }, (err, user, info) => {
+        if (err) {
+          console.error('Error en registro:', err);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Error interno del servidor',
+          });
+        }
+
+        // Si hay errores de validación
+        if (!user) {
+          const errorMessages = [
+            'Campos requeridos faltantes',
+            'Formato de email inválido',
+            'La contraseña debe tener al menos 6 caracteres',
+            'El email ya está registrado',
+          ];
+
+          // Verificar si el error es de validación
+          if (info && errorMessages.some(msg => info.message.includes(msg))) {
+            return res.status(400).json({
+              status: 'error',
+              message: info.message,
+            });
+          }
+
+          // Error de email duplicado
+          if (info && info.message === 'El email ya está registrado') {
+            return res.status(409).json({
+              status: 'error',
+              message: info.message,
+            });
+          }
+
+          // Otros errores
+          return res.status(400).json({
+            status: 'error',
+            message: info?.message || 'Error en registro',
+          });
+        }
+
+        // Usuario creado exitosamente
+        res.status(201).json({
+          status: 'success',
+          payload: user,
+          message: 'Usuario registrado exitosamente',
+        });
+      })(req, res, next);
     } catch (error) {
-      // Manejar diferentes tipos de errores
-      const errorMessages = [
-        'Campos requeridos faltantes',
-        'Formato de email inválido',
-        'La contraseña debe tener al menos 6 caracteres',
-        'El email ya está registrado',
-        'Rol inválido',
-      ];
-      
-      // Verificar si el error es de validación (400 Bad Request)
-      if (errorMessages.some(msg => error.message.includes(msg))) {
-        return res.status(400).json({
-          status: 'error',
-          message: error.message,
-        });
-      }
-      
-      // Error de email duplicado (409 Conflict)
-      if (error.message === 'El email ya está registrado') {
-        return res.status(409).json({
-          status: 'error',
-          message: 'El email ya está registrado',
-        });
-      }
-      
-      // Error general del servidor (500)
-      console.error('Error en registro:', error);
+      console.error('Error en register:', error);
       res.status(500).json({
         status: 'error',
         message: 'Error interno del servidor',
@@ -54,43 +72,62 @@ class SessionController {
   }
 
   /**
-   * Inicia sesión de usuario
+   * Inicia sesión usando Passport
    * POST /api/sessions/login
    */
-  async login(req, res) {
+  async login(req, res, next) {
     try {
-      const { email, password } = req.body;
-      
-      // Intentar autenticar al usuario
-      const { token, user } = await SessionService.login({ email, password });
-      
-      // Configurar la cookie con el JWT
-      const isProduction = process.env.NODE_ENV === 'production';
-      
-      res.cookie('currentUser', token, {
-        httpOnly: true, // No accesible desde JavaScript del cliente
-        secure: isProduction, // Solo HTTPS en producción
-        sameSite: 'lax', // Protección CSRF
-        maxAge: 3600000, // 1 hora en milisegundos
-        path: '/', // Disponible en toda la aplicación
-      });
-      
-      // Respuesta exitosa (no incluir el token en el body)
-      res.status(200).json({
-        status: 'success',
-        message: 'Login correcto',
-        user: user, // Incluir datos del usuario (sin contraseña)
-      });
-    } catch (error) {
-      // Manejar errores de autenticación
-      if (error.message === 'Credenciales inválidas') {
-        return res.status(401).json({
-          status: 'error',
-          message: 'Credenciales inválidas',
+      // Delegar en la estrategia login de Passport
+      passport.authenticate('login', { session: false }, async (err, user, info) => {
+        if (err) {
+          console.error('Error en login:', err);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Error interno del servidor',
+          });
+        }
+
+        // Credenciales inválidas
+        if (!user) {
+          return res.status(401).json({
+            status: 'error',
+            message: 'Credenciales inválidas',
+          });
+        }
+
+        // Generar JWT (el controller genera el token, no la estrategia)
+        const payload = {
+          id: user._id.toString(),
+          email: user.email,
+          role: user.role,
+        };
+
+        const token = JwtHelper.generateToken(payload);
+
+        // Configurar cookie HTTP Only
+        const isProduction = process.env.NODE_ENV === 'production';
+        res.cookie('currentUser', token, {
+          httpOnly: true,
+          secure: isProduction,
+          sameSite: 'lax',
+          maxAge: 3600000, // 1 hora
+          path: '/',
         });
-      }
-      
-      // Error general del servidor
+
+        // Respuesta exitosa
+        res.status(200).json({
+          status: 'success',
+          message: 'Login correcto',
+          user: {
+            id: user._id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            email: user.email,
+            role: user.role,
+          },
+        });
+      })(req, res, next);
+    } catch (error) {
       console.error('Error en login:', error);
       res.status(500).json({
         status: 'error',
@@ -100,21 +137,18 @@ class SessionController {
   }
 
   /**
-   * Obtiene el usuario autenticado actual
-   * GET /api/sessions/current (Protegida por auth middleware)
+   * Obtiene el usuario autenticado
+   * GET /api/sessions/current (protegida con auth middleware)
    */
   async getCurrentUser(req, res) {
     try {
-      // req.user es establecido por el middleware auth
-      const userId = req.user.id;
-      
-      // Obtener datos del usuario
-      const user = await SessionService.getCurrentUser(userId);
-      
+      // req.user ya está disponible gracias al middleware auth
+      const user = req.user;
+
       res.status(200).json({
         status: 'success',
         payload: {
-          id: user._id,
+          id: user.id,
           email: user.email,
           role: user.role,
           first_name: user.first_name,
@@ -122,13 +156,6 @@ class SessionController {
         },
       });
     } catch (error) {
-      if (error.message === 'Usuario no encontrado') {
-        return res.status(404).json({
-          status: 'error',
-          message: 'Usuario no encontrado',
-        });
-      }
-      
       console.error('Error en current user:', error);
       res.status(500).json({
         status: 'error',
@@ -138,17 +165,11 @@ class SessionController {
   }
 
   /**
-   * Cierra sesión de usuario
+   * Cierra sesión y elimina la cookie
    * POST /api/sessions/logout
    */
   async logout(req, res) {
     try {
-      // Obtener token de la cookie
-      const token = req.cookies?.currentUser;
-      
-      // Llamar al servicio de logout
-      await SessionService.logout(token);
-      
       // Eliminar la cookie
       res.clearCookie('currentUser', {
         httpOnly: true,
@@ -156,7 +177,7 @@ class SessionController {
         sameSite: 'lax',
         path: '/',
       });
-      
+
       res.status(200).json({
         status: 'success',
         message: 'Sesión cerrada exitosamente',
@@ -177,16 +198,16 @@ class SessionController {
   async validateToken(req, res) {
     try {
       const token = req.cookies?.currentUser;
-      
+
       if (!token) {
         return res.status(400).json({
           status: 'error',
           message: 'No se encontró token en la cookie',
         });
       }
-      
-      const decoded = await SessionService.validateToken(token);
-      
+
+      const decoded = JwtHelper.verifyToken(token);
+
       res.status(200).json({
         status: 'success',
         payload: decoded,
