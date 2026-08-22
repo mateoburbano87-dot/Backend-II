@@ -1,44 +1,42 @@
+## 🔐 Roles y Autorización
 
-## Descripción del Proyecto
+### Roles del Sistema
 
-Plataforma de Eventos e Inscripciones - Backend API desarrollada con Node.js y Express, siguiendo una arquitectura por capas con autenticación JWT mediante cookies HTTP Only.
+| Rol | Descripción | Permisos |
+|-----|-------------|----------|
+| `user` | Usuario estándar | Ver eventos, registrarse |
+| `organizer` | Organizador de eventos | Crear y gestionar sus eventos |
+| `admin` | Administrador del sistema | Gestionar todo, incluyendo usuarios |
 
-## Características
+### Matriz de Permisos
 
-- ✅ Registro de usuarios con hash de contraseña (bcrypt)
-- ✅ Login con JWT almacenado en cookie HTTP Only
-- ✅ Ruta protegida `/current` para obtener usuario autenticado
-- ✅ Logout con eliminación de cookie
-- ✅ Arquitectura por capas (Controller → Service → Repository → DAO → Model)
-- ✅ Validación de datos en múltiples niveles
-- ✅ Manejo de errores centralizado
-- ✅ Variables de entorno para configuración segura
+| Acción | user | organizer | admin |
+|--------|------|-----------|-------|
+| Ver eventos | ✅ | ✅ | ✅ |
+| Ver evento por ID | ✅ | ✅ | ✅ |
+| Crear evento | ❌ | ✅ | ✅ |
+| Editar evento propio | ❌ | ✅ | ✅ |
+| Editar evento ajeno | ❌ | ❌ | ✅ |
+| Eliminar evento | ❌ | ❌ | ✅ |
+| Ver /current | ✅ | ✅ | ✅ |
+| Ruta admin | ❌ | ❌ | ✅ |
+| Ruta organizer | ❌ | ✅ | ✅ |
 
-## Tecnologías
+### Códigos de Error
 
-| Tecnología | Descripción |
-|------------|-------------|
-| Node.js | Runtime JavaScript |
-| Express.js | Framework web |
-| MongoDB | Base de datos NoSQL |
-| Mongoose | ODM para MongoDB |
-| JWT | Autenticación basada en tokens |
-| bcryptjs | Hashing de contraseñas |
-| cookie-parser | Manejo de cookies |
-| dotenv | Variables de entorno |
-| CORS | Cross-Origin Resource Sharing |
+| Código | Significado | Cuándo ocurre |
+|--------|-------------|---------------|
+| 401 | No autenticado | No hay cookie/token válido |
+| 403 | Sin permisos | Autenticado pero rol no autorizado |
 
-## Autenticación con Passport.js
+### Rutas Protegidas
 
-### Estrategias Implementadas
-
-| Estrategia | Descripción | Estado |
-|------------|-------------|--------|
-| `register` | Registro de usuarios con validación y hash | ✅ Implementada |
-| `login` | Autenticación de usuarios con JWT | ✅ Implementada |
-| `jwt` | Verificación de JWT desde cookie | ✅ Implementada |
-| `jwt-header` | Verificación de JWT desde header | ✅ Preparada |
-| `google` | Autenticación con Google | 🚧 En desarrollo |
-| `github` | Autenticación con GitHub | 🚧 En desarrollo |
-
+| Método | Ruta | Requisito |
+|--------|------|-----------|
+| GET | `/api/sessions/current` | Autenticado (401 si no) |
+| POST | `/api/events` | organizer o admin (403 si user) |
+| PUT | `/api/events/:id` | organizer propietario o admin |
+| DELETE | `/api/events/:id` | admin |
+| GET | `/api/sessions/admin/test` | admin |
+| GET | `/api/sessions/organizer/test` | organizer o admin |
 
