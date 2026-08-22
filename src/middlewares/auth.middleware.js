@@ -1,117 +1,91 @@
 /**
- * Middleware de autenticación usando Passport.js
+ * Middleware de autenticación con Passport
+ * Responde 401 si no hay sesión válida
+ * Responde 403 si hay sesión pero sin permisos (en authorize)
  */
 
 import passport from 'passport';
-import UserRepository from '../repositories/userRepository.js';
-import JwtHelper from '../utils/jwt.js';
 
 /**
- * Middleware de autenticación con Passport (estrategia jwt)
- * Verifica la cookie y autentica al usuario
+ * Middleware de autenticación principal
+ * Usa la estrategia jwt de Passport
+ * Responde 401 si no está autenticado
  */
 export const auth = async (req, res, next) => {
-  try {
-    // Usar la estrategia JWT de Passport
-    passport.authenticate('jwt', { session: false }, (err, user, info) => {
-      if (err) {
-        console.error('Error en auth middleware:', err);
-        return res.status(500).json({
-          status: 'error',
-          message: 'Error interno del servidor',
-        });
-      }
+    try {
+        passport.authenticate('jwt', { session: false }, (err, user, info) => {
+            if (err) {
+                console.error('Error en auth:', err);
+                return res.status(500).json({
+                    status: 'error',
+                    message: 'Error interno del servidor'
+                });
+            }
 
-      if (!user) {
+            if (!user) {
+                return res.status(401).json({
+                    status: 'error',
+                    message: 'No autenticado'
+                });
+            }
+
+            // Guardar usuario en req.user
+            req.user = {
+                id: user._id.toString(),
+                email: user.email,
+                role: user.role,
+                first_name: user.first_name,
+                last_name: user.last_name
+            };
+
+            next();
+        })(req, res, next);
+    } catch (error) {
+        console.error('Error en auth:', error);
         return res.status(401).json({
-          status: 'error',
-          message: 'No autenticado',
+            status: 'error',
+            message: 'No autenticado'
         });
-      }
-
-      // Guardar usuario en req.user
-      req.user = {
-        id: user._id.toString(),
-        email: user.email,
-        role: user.role,
-        first_name: user.first_name,
-        last_name: user.last_name,
-      };
-
-      next();
-    })(req, res, next);
-  } catch (error) {
-    console.error('Error en auth:', error);
-    return res.status(401).json({
-      status: 'error',
-      message: 'No autenticado',
-    });
-  }
+    }
 };
 
 /**
- * Middleware de autenticación con estrategia desde header
- * Para futuros usos con Bearer token
+ * Middleware de autenticación para rutas que requieren admin
+ * Primero autentica, luego verifica rol admin
  */
-export const authBearer = async (req, res, next) => {
-  try {
-    passport.authenticate('jwt-header', { session: false }, (err, user, info) => {
-      if (err) {
-        return res.status(500).json({
-          status: 'error',
-          message: 'Error interno del servidor',
-        });
-      }
-
-      if (!user) {
-        return res.status(401).json({
-          status: 'error',
-          message: 'Token inválido',
-        });
-      }
-
-      req.user = {
-        id: user._id.toString(),
-        email: user.email,
-        role: user.role,
-      };
-
-      next();
-    })(req, res, next);
-  } catch (error) {
-    return res.status(401).json({
-      status: 'error',
-      message: 'No autenticado',
+export const authAdmin = async (req, res, next) => {
+    auth(req, res, (err) => {
+        if (err) return next(err);
+        
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                status: 'error',
+                message: 'Se requiere rol de administrador'
+            });
+        }
+        next();
     });
-  }
 };
 
 /**
- * Middleware para verificar roles con Passport
- * Requiere que el usuario esté autenticado primero
+ * Middleware de autenticación para rutas que requieren organizer o admin
  */
-export const authorize = (allowedRoles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'No autenticado',
-      });
-    }
-
-    if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'No autorizado - Rol insuficiente',
-      });
-    }
-
-    next();
-  };
+export const authOrganizer = async (req, res, next) => {
+    auth(req, res, (err) => {
+        if (err) return next(err);
+        
+        if (!['organizer', 'admin'].includes(req.user.role)) {
+            return res.status(403).json({
+                status: 'error',
+                message: 'Se requiere ser organizador o administrador'
+            });
+        }
+        next();
+    });
 };
 
 export default {
-  auth,
-  authBearer,
-  authorize,
+    auth,
+    authAdmin,
+    authOrganizer
 };
