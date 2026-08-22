@@ -1,27 +1,38 @@
 import { Router } from 'express';
 import EventController from '../controllers/eventController.js';
+import { auth, authAdmin } from '../middlewares/auth.middleware.js';
+import { authorize, isAdmin } from '../middlewares/authorize.middleware.js';
 
 const router = Router();
 
-// GET /api/events - Obtener todos los eventos
+// Rutas públicas
 router.get('/', EventController.getAllEvents);
-
-// GET /api/events/upcoming - Obtener eventos próximos
 router.get('/upcoming', EventController.getUpcomingEvents);
-
-// GET /api/events/category/:category - Obtener eventos por categoría
 router.get('/category/:category', EventController.getEventsByCategory);
-
-// GET /api/events/:id - Obtener evento por ID
 router.get('/:id', EventController.getEventById);
 
-// POST /api/events - Crear nuevo evento
-router.post('/', EventController.createEvent);
+// Rutas protegidas - solo organizer o admin
+router.post(
+    '/',
+    auth, // Primero autenticar
+    authorize(['organizer', 'admin']), // Luego autorizar
+    EventController.createEvent
+);
 
-// PUT /api/events/:id - Actualizar evento
-router.put('/:id', EventController.updateEvent);
+// Actualizar evento - solo organizer propietario o admin
+router.put(
+    '/:id',
+    auth,
+    authorize(['organizer', 'admin']),
+    EventController.updateEvent
+);
 
-// DELETE /api/events/:id - Eliminar evento
-router.delete('/:id', EventController.deleteEvent);
+// Eliminar evento - solo admin
+router.delete(
+    '/:id',
+    auth,
+    isAdmin, // Solo admin puede eliminar
+    EventController.deleteEvent
+);
 
 export default router;

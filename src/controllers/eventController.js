@@ -1,9 +1,3 @@
-/**
- * Controlador de Eventos
- * Gestiona creación, lectura, actualización y eliminación de eventos
- * Incluye validaciones de propiedad para organizer
- */
-
 import EventService from '../services/eventService.js';
 
 class EventController {
