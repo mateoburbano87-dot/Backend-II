@@ -1,72 +1,81 @@
-/**
- * Rutas de Sesión
- */
-
 import { Router } from 'express';
 import SessionController from '../controllers/sessionController.js';
 import { auth } from '../middlewares/auth.middleware.js';
+import { authorize } from '../middlewares/authorize.middleware.js';
 import {
-  validateRequiredFields,
-  validateEmail,
-  validatePassword,
-  preventRoleManipulation,
-  normalizeEmail,
-  validateLoginFields,
+    validateRequiredFields,
+    validateEmail,
+    validatePassword,
+    preventRoleManipulation,
+    normalizeEmail,
+    validateLoginFields
 } from '../middlewares/validationMiddleware.js';
 
 const router = Router();
 
-/**
- * POST /api/sessions/register - Registro de usuario
- * Usa la estrategia register de Passport
- * Las validaciones previas se mantienen para mayor seguridad
- */
+// Registro - público
 router.post(
-  '/register',
-  validateRequiredFields(['first_name', 'last_name', 'email', 'password']),
-  validateEmail,
-  validatePassword,
-  preventRoleManipulation,
-  normalizeEmail,
-  SessionController.register
+    '/register',
+    validateRequiredFields(['first_name', 'last_name', 'email', 'password']),
+    validateEmail,
+    validatePassword,
+    preventRoleManipulation,
+    normalizeEmail,
+    SessionController.register
 );
 
-/**
- * POST /api/sessions/login - Login de usuario
- * Usa la estrategia login de Passport
- */
+// Login - público
 router.post(
-  '/login',
-  validateLoginFields,
-  SessionController.login
+    '/login',
+    validateLoginFields,
+    SessionController.login
 );
 
-/**
- * GET /api/sessions/current - Obtener usuario autenticado
- * Protegida con el middleware auth de Passport
- */
+// Usuario actual - solo autenticados
 router.get(
-  '/current',
-  auth,
-  SessionController.getCurrentUser
+    '/current',
+    auth, // 401 si no autenticado
+    SessionController.getCurrentUser
 );
 
-/**
- * POST /api/sessions/logout - Cerrar sesión
- * No requiere autenticación
- */
+// Logout - público (elimina cookie)
 router.post(
-  '/logout',
-  SessionController.logout
+    '/logout',
+    SessionController.logout
 );
 
-/**
- * POST /api/sessions/validate - Validar token
- * Para debugging
- */
+// Ruta administrativa de prueba - solo admin
+router.get(
+    '/admin/test',
+    auth,
+    authorize(['admin']), // 403 si no es admin
+    (req, res) => {
+        res.status(200).json({
+            status: 'success',
+            message: 'Ruta administrativa accesible',
+            user: req.user
+        });
+    }
+);
+
+// Ruta de organizador de prueba - solo organizer o admin
+router.get(
+    '/organizer/test',
+    auth,
+    authorize(['organizer', 'admin']),
+    (req, res) => {
+        res.status(200).json({
+            status: 'success',
+            message: 'Ruta de organizador accesible',
+            user: req.user
+        });
+    }
+);
+
+// Validar token - público (debug)
 router.post(
-  '/validate',
-  SessionController.validateToken
+    '/validate',
+    SessionController.validateToken
 );
 
 export default router;
