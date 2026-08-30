@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import EventController from '../controllers/eventController.js';
-import { auth, authAdmin } from '../middlewares/auth.middleware.js';
+import { auth } from '../middlewares/auth.middleware.js';
 import { authorize, isAdmin } from '../middlewares/authorize.middleware.js';
 
 const router = Router();
@@ -8,14 +8,14 @@ const router = Router();
 // Rutas públicas
 router.get('/', EventController.getAllEvents);
 router.get('/upcoming', EventController.getUpcomingEvents);
-router.get('/category/:category', EventController.getEventsByCategory);
 router.get('/:id', EventController.getEventById);
+router.get('/organizer/:organizerId', EventController.getEventsByOrganizer);
 
 // Rutas protegidas - solo organizer o admin
 router.post(
     '/',
-    auth, // Primero autenticar
-    authorize(['organizer', 'admin']), // Luego autorizar
+    auth,
+    authorize(['organizer', 'admin']),
     EventController.createEvent
 );
 
@@ -27,12 +27,20 @@ router.put(
     EventController.updateEvent
 );
 
+// Cancelar evento - solo organizer propietario o admin
+router.patch(
+    '/:id/cancel',
+    auth,
+    authorize(['organizer', 'admin']),
+    EventController.cancelEvent
+);
+
 // Eliminar evento - solo admin
 router.delete(
     '/:id',
     auth,
-    isAdmin, // Solo admin puede eliminar
-    EventController.deleteEvent
+    isAdmin,
+    EventController.cancelEvent // Reutilizamos cancelar en lugar de eliminar
 );
 
 export default router;
