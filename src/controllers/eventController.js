@@ -2,29 +2,47 @@ import EventService from '../services/eventService.js';
 
 class EventController {
     /**
-     * Obtener todos los eventos
-     * GET /api/events - Público
+     * Obtener todos los eventos con filtros
+     * GET /api/events
      */
     async getAllEvents(req, res) {
         try {
-            const { category, isActive, limit = 10, skip = 0 } = req.query;
-            
-            const filter = {};
-            if (category) filter.category = category;
-            if (isActive !== undefined) filter.isActive = isActive === 'true';
-            
-            const events = await EventService.getAllEvents(filter, {
-                limit: parseInt(limit),
-                skip: parseInt(skip)
+            const { 
+                status, 
+                category, 
+                location, 
+                dateFrom, 
+                dateTo,
+                page = 1,
+                limit = 10,
+                sort = 'date'
+            } = req.query;
+
+            const events = await EventService.getEvents({
+                status,
+                category,
+                location,
+                dateFrom,
+                dateTo,
+                page,
+                limit,
+                sort
             });
-            
+
             res.status(200).json({
                 status: 'success',
-                payload: events,
-                count: events.length
+                payload: events
             });
         } catch (error) {
             console.error('Error en getAllEvents:', error);
+            
+            if (error.message.includes('Estado inválido') || error.message.includes('Categoría inválida')) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: error.message
+                });
+            }
+
             res.status(500).json({
                 status: 'error',
                 message: 'Error interno del servidor'
@@ -34,7 +52,7 @@ class EventController {
 
     /**
      * Obtener evento por ID
-     * GET /api/events/:id - Público
+     * GET /api/events/:id
      */
     async getEventById(req, res) {
         try {
@@ -49,7 +67,7 @@ class EventController {
             if (error.message === 'Evento no encontrado') {
                 return res.status(404).json({
                     status: 'error',
-                    message: error.message
+                    message: 'Evento no encontrado'
                 });
             }
             
@@ -67,10 +85,10 @@ class EventController {
      */
     async createEvent(req, res) {
         try {
-            // El organizador se obtiene del usuario autenticado
+            // El organizador se asigna desde req.user
             const eventData = {
                 ...req.body,
-                organizer: req.user.id // Usar el ID del usuario autenticado
+                organizer: req.user.id
             };
             
             const newEvent = await EventService.createEvent(eventData);
@@ -81,7 +99,11 @@ class EventController {
                 message: 'Evento creado exitosamente'
             });
         } catch (error) {
-            if (error.message.includes('fecha') || error.message.includes('capacidad')) {
+            // Errores de validación
+            if (error.message.includes('fecha') || 
+                error.message.includes('capacidad') || 
+                error.message.includes('precio') ||
+                error.message.includes('Campos requeridos')) {
                 return res.status(400).json({
                     status: 'error',
                     message: error.message
@@ -104,28 +126,15 @@ class EventController {
         try {
             const { id } = req.params;
             const updateData = req.body;
+            const userId = req.user.id;
+            const userRole = req.user.role;
             
-            // Verificar propiedad del evento
-            const event = await EventService.getEventById(id);
-            
-            // Si el usuario es organizer, verificar que sea el propietario
-            if (req.user.role === 'organizer' && req.user.id !== event.organizer._id.toString()) {
-                return res.status(403).json({
-                    status: 'error',
-                    message: 'No tenés permisos para modificar este evento'
-                });
-            }
-            
-            // Si es user, no puede modificar
-            if (req.user.role === 'user') {
-                return res.status(403).json({
-                    status: 'error',
-                    message: 'No tenés permisos para realizar esta acción'
-                });
-            }
-            
-            // Admin puede modificar cualquier evento
-            const updatedEvent = await EventService.updateEvent(id, updateData);
+            const updatedEvent = await EventService.updateEvent(
+                id, 
+                updateData, 
+                userId, 
+                userRole
+            );
             
             res.status(200).json({
                 status: 'success',
@@ -135,6 +144,16 @@ class EventController {
         } catch (error) {
             if (error.message === 'Evento no encontrado') {
                 return res.status(404).json({
+                    status: 'error',
+                    message: 'Evento no encontrado'
+                });
+            }
+            
+            if (error.message.includes('No tenés permisos') || 
+                error.message.includes('No se puede modificar') ||
+                error.message.includes('No se puede publicar') ||
+                error.message.includes('Ya está cancelado')) {
+                return res.status(403).json({
                     status: 'error',
                     message: error.message
                 });
@@ -156,29 +175,40 @@ class EventController {
     }
 
     /**
-     * Eliminar evento
-     * DELETE /api/events/:id - Solo admin
+     * Cancelar evento
+     * PATCH /api/events/:id/cancel - Solo organizer propietario o admin
      */
-    async deleteEvent(req, res) {
+    async cancelEvent(req, res) {
         try {
             const { id } = req.params;
+            const userId = req.user.id;
+            const userRole = req.user.role;
             
-            // Verificar que el usuario sea admin (ya está en el middleware)
-            await EventService.deleteEvent(id);
+            const cancelledEvent = await EventService.cancelEvent(id, userId, userRole);
             
             res.status(200).json({
                 status: 'success',
-                message: 'Evento eliminado exitosamente'
+                payload: cancelledEvent,
+                message: 'Evento cancelado exitosamente'
             });
         } catch (error) {
             if (error.message === 'Evento no encontrado') {
                 return res.status(404).json({
                     status: 'error',
+                    message: 'Evento no encontrado'
+                });
+            }
+            
+            if (error.message.includes('No tenés permisos') || 
+                error.message.includes('Ya está cancelado') ||
+                error.message.includes('No se puede cancelar')) {
+                return res.status(403).json({
+                    status: 'error',
                     message: error.message
                 });
             }
             
-            console.error('Error en deleteEvent:', error);
+            console.error('Error en cancelEvent:', error);
             res.status(500).json({
                 status: 'error',
                 message: 'Error interno del servidor'
@@ -188,7 +218,7 @@ class EventController {
 
     /**
      * Obtener eventos próximos
-     * GET /api/events/upcoming - Público
+     * GET /api/events/upcoming
      */
     async getUpcomingEvents(req, res) {
         try {
@@ -209,13 +239,13 @@ class EventController {
     }
 
     /**
-     * Obtener eventos por categoría
-     * GET /api/events/category/:category - Público
+     * Obtener eventos de un organizador
+     * GET /api/events/organizer/:organizerId
      */
-    async getEventsByCategory(req, res) {
+    async getEventsByOrganizer(req, res) {
         try {
-            const { category } = req.params;
-            const events = await EventService.getEventsByCategory(category);
+            const { organizerId } = req.params;
+            const events = await EventService.getEventsByOrganizer(organizerId);
             
             res.status(200).json({
                 status: 'success',
@@ -223,7 +253,7 @@ class EventController {
                 count: events.length
             });
         } catch (error) {
-            console.error('Error en getEventsByCategory:', error);
+            console.error('Error en getEventsByOrganizer:', error);
             res.status(500).json({
                 status: 'error',
                 message: 'Error interno del servidor'
