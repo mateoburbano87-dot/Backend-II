@@ -1,5 +1,11 @@
+/**
+ * Rutas de Eventos
+ * CRUD completo con autorización por roles
+ */
+
 import { Router } from 'express';
 import EventController from '../controllers/eventController.js';
+import TicketController from '../controllers/ticketController.js';
 import { auth } from '../middlewares/auth.middleware.js';
 import { authorize, isAdmin } from '../middlewares/authorize.middleware.js';
 
@@ -10,6 +16,9 @@ router.get('/', EventController.getAllEvents);
 router.get('/upcoming', EventController.getUpcomingEvents);
 router.get('/:id', EventController.getEventById);
 router.get('/organizer/:organizerId', EventController.getEventsByOrganizer);
+
+// Verificar disponibilidad de cupos (público)
+router.get('/:eid/availability', TicketController.checkAvailability);
 
 // Rutas protegidas - solo organizer o admin
 router.post(
@@ -35,12 +44,20 @@ router.patch(
     EventController.cancelEvent
 );
 
+// Obtener tickets de un evento - solo organizer/admin
+router.get(
+    '/:eid/tickets',
+    auth,
+    authorize(['organizer', 'admin']),
+    TicketController.getTicketsByEvent
+);
+
 // Eliminar evento - solo admin
 router.delete(
     '/:id',
     auth,
     isAdmin,
-    EventController.cancelEvent // Reutilizamos cancelar en lugar de eliminar
+    EventController.cancelEvent
 );
 
 export default router;
