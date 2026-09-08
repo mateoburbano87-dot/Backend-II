@@ -1,8 +1,3 @@
-/**
- * Modelo de Ticket (Inscripción)
- * Representa la inscripción de un usuario a un evento
- * Usa referencias a User y Event (sin embebidos)
- */
 
 import mongoose from 'mongoose';
 
