@@ -5,31 +5,35 @@
   "description": "Plataforma de Eventos e Inscripciones - Backend",
   "main": "src/server.js",
   "scripts": {
-    "preinstall": "npx npm-force-resolutions",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
   },
+  "keywords": [
+    "express",
+    "events",
+    "platform",
+    "backend",
+    "jwt",
+    "authentication",
+    "passport",
+    "tickets",
+    "nodemailer"
+  ],
+  "author": "Tu Nombre",
+  "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
-    "mongoose": "^7.6.8",
-    "dotenv": "^16.4.5",
+    "mongoose": "^7.0.3",
+    "dotenv": "^16.0.3",
     "cors": "^2.8.5",
     "cookie-parser": "^1.4.6",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "passport": "^0.7.0",
+    "jsonwebtoken": "^9.0.0",
+    "passport": "^0.6.0",
     "passport-local": "^1.0.0",
-    "nodemailer": "^6.9.13"
+    "nodemailer": "^6.9.7"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0",
-    "npm-force-resolutions": "^0.0.10"
-  },
-  "resolutions": {
-    "qs": "6.12.3"
-  },
-
-  "overrides": {
-    "qs": "6.12.3"
+    "nodemon": "^2.0.22"
   }
 }
