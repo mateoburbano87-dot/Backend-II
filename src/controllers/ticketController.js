@@ -1,212 +1,88 @@
+/**
+ * Controlador de Tickets
+ * Solo coordina request/response. Usa DTO.
+ */
 
 import TicketService from '../services/ticketService.js';
+import TicketDto from '../dto/TicketDto.js';
+import AppError from '../utils/AppError.js';
 
 class TicketController {
-    /**
-     * Crear ticket (inscripción a evento)
-     * POST /api/tickets
-     */
-    async createTicket(req, res) {
+    async createTicket(req, res, next) {
         try {
             const { eventId, quantity = 1 } = req.body;
-            const userId = req.user.id;
-
-            // Validar campos requeridos
             if (!eventId) {
-                return res.status(400).json({
-                    status: 'error',
-                    message: 'El ID del evento es requerido'
-                });
+                return next(AppError.badRequest('El ID del evento es requerido'));
             }
 
-            const ticket = await TicketService.createTicket(userId, eventId, quantity);
+            const ticket = await TicketService.createTicket(req.user.id, eventId, quantity);
 
             res.status(201).json({
                 status: 'success',
-                payload: ticket,
+                payload: TicketDto.toResponse(ticket),
                 message: 'Inscripción confirmada exitosamente'
             });
         } catch (error) {
-            // Errores de validación
-            if (error.message.includes('Evento no encontrado')) {
-                return res.status(404).json({
-                    status: 'error',
-                    message: 'Evento no encontrado'
-                });
-            }
-
-            if (error.message.includes('No hay cupos disponibles')) {
-                return res.status(400).json({
-                    status: 'error',
-                    message: error.message
-                });
-            }
-
-            if (error.message.includes('Ya tienes una inscripción activa')) {
-                return res.status(400).json({
-                    status: 'error',
-                    message: error.message
-                });
-            }
-
-            if (error.message.includes('La cantidad debe ser mayor a 0')) {
-                return res.status(400).json({
-                    status: 'error',
-                    message: error.message
-                });
-            }
-
-            if (error.message.includes('El evento no está disponible para inscripciones')) {
-                return res.status(400).json({
-                    status: 'error',
-                    message: error.message
-                });
-            }
-
-            console.error('Error en createTicket:', error);
-            res.status(500).json({
-                status: 'error',
-                message: 'Error interno del servidor'
-            });
+            next(error);
         }
     }
 
-    /**
-     * Obtener mis tickets
-     * GET /api/tickets/my-tickets
-     */
-    async getMyTickets(req, res) {
+    async getMyTickets(req, res, next) {
         try {
-            const userId = req.user.id;
-            const tickets = await TicketService.getTicketsByUser(userId);
-
+            const tickets = await TicketService.getTicketsByUser(req.user.id);
             res.status(200).json({
                 status: 'success',
-                payload: tickets,
-                count: tickets.length
+                payload: TicketDto.toResponseList(tickets)
             });
         } catch (error) {
-            console.error('Error en getMyTickets:', error);
-            res.status(500).json({
-                status: 'error',
-                message: 'Error interno del servidor'
-            });
+            next(error);
         }
     }
 
-    /**
-     * Cancelar ticket
-     * DELETE /api/tickets/:id
-     */
-    async cancelTicket(req, res) {
+    async cancelTicket(req, res, next) {
         try {
-            const { id } = req.params;
-            const userId = req.user.id;
-            const userRole = req.user.role;
-
-            const cancelledTicket = await TicketService.cancelTicket(id, userId, userRole);
+            const cancelled = await TicketService.cancelTicket(
+                req.params.id,
+                req.user.id,
+                req.user.role
+            );
 
             res.status(200).json({
                 status: 'success',
-                payload: cancelledTicket,
+                payload: TicketDto.toResponse(cancelled),
                 message: 'Ticket cancelado exitosamente'
             });
         } catch (error) {
-            if (error.message === 'Ticket no encontrado') {
-                return res.status(404).json({
-                    status: 'error',
-                    message: 'Ticket no encontrado'
-                });
-            }
-
-            if (error.message.includes('No tenés permisos')) {
-                return res.status(403).json({
-                    status: 'error',
-                    message: error.message
-                });
-            }
-
-            if (error.message.includes('El ticket ya está cancelado')) {
-                return res.status(400).json({
-                    status: 'error',
-                    message: error.message
-                });
-            }
-
-            console.error('Error en cancelTicket:', error);
-            res.status(500).json({
-                status: 'error',
-                message: 'Error interno del servidor'
-            });
+            next(error);
         }
     }
 
-    /**
-     * Obtener tickets de un evento (solo organizador/admin)
-     * GET /api/events/:eid/tickets
-     */
-    async getTicketsByEvent(req, res) {
+    async getTicketsByEvent(req, res, next) {
         try {
-            const { eid } = req.params;
-            const userId = req.user.id;
-            const userRole = req.user.role;
-
-            const tickets = await TicketService.getTicketsByEvent(eid, userId, userRole);
+            const tickets = await TicketService.getTicketsByEvent(
+                req.params.eid,
+                req.user.id,
+                req.user.role
+            );
 
             res.status(200).json({
                 status: 'success',
-                payload: tickets,
-                count: tickets.length
+                payload: TicketDto.toResponseList(tickets)
             });
         } catch (error) {
-            if (error.message === 'Evento no encontrado') {
-                return res.status(404).json({
-                    status: 'error',
-                    message: 'Evento no encontrado'
-                });
-            }
-
-            if (error.message.includes('No tenés permisos')) {
-                return res.status(403).json({
-                    status: 'error',
-                    message: error.message
-                });
-            }
-
-            console.error('Error en getTicketsByEvent:', error);
-            res.status(500).json({
-                status: 'error',
-                message: 'Error interno del servidor'
-            });
+            next(error);
         }
     }
 
-    /**
-     * Verificar disponibilidad de cupos
-     * GET /api/events/:eid/availability
-     */
-    async checkAvailability(req, res) {
+    async checkAvailability(req, res, next) {
         try {
-            const { eid } = req.params;
-            const availability = await TicketService.checkAvailability(eid);
-
+            const availability = await TicketService.checkAvailability(req.params.eid);
             res.status(200).json({
                 status: 'success',
                 payload: availability
             });
         } catch (error) {
-            if (error.message === 'Evento no encontrado') {
-                return res.status(404).json({
-                    status: 'error',
-                    message: 'Evento no encontrado'
-                });
-            }
-
-            console.error('Error en checkAvailability:', error);
-            res.status(500).json({
-                status: 'error',
-                message: 'Error interno del servidor'
-            });
+            next(error);
         }
     }
 }
