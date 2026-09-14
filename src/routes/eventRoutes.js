@@ -7,53 +7,22 @@ import { authorize, isAdmin } from '../middlewares/authorize.middleware.js';
 
 const router = Router();
 
-// Rutas públicas
+// Públicas
 router.get('/', EventController.getAllEvents);
 router.get('/upcoming', EventController.getUpcomingEvents);
-router.get('/:id', EventController.getEventById);
 router.get('/organizer/:organizerId', EventController.getEventsByOrganizer);
-
-// Verificar disponibilidad de cupos (público)
 router.get('/:eid/availability', TicketController.checkAvailability);
+router.get('/:id', EventController.getEventById);
 
-// Rutas protegidas - solo organizer o admin
-router.post(
-    '/',
-    auth,
-    authorize(['organizer', 'admin']),
-    EventController.createEvent
-);
+// Protegidas - organizer o admin
+router.post('/', auth, authorize(['organizer', 'admin']), EventController.createEvent);
+router.put('/:id', auth, authorize(['organizer', 'admin']), EventController.updateEvent);
+router.patch('/:id/cancel', auth, authorize(['organizer', 'admin']), EventController.cancelEvent);
 
-// Actualizar evento - solo organizer propietario o admin
-router.put(
-    '/:id',
-    auth,
-    authorize(['organizer', 'admin']),
-    EventController.updateEvent
-);
+// Tickets de un evento - organizer o admin
+router.get('/:eid/tickets', auth, authorize(['organizer', 'admin']), TicketController.getTicketsByEvent);
 
-// Cancelar evento - solo organizer propietario o admin
-router.patch(
-    '/:id/cancel',
-    auth,
-    authorize(['organizer', 'admin']),
-    EventController.cancelEvent
-);
-
-// Obtener tickets de un evento - solo organizer/admin
-router.get(
-    '/:eid/tickets',
-    auth,
-    authorize(['organizer', 'admin']),
-    TicketController.getTicketsByEvent
-);
-
-// Eliminar evento - solo admin
-router.delete(
-    '/:id',
-    auth,
-    isAdmin,
-    EventController.cancelEvent
-);
+// Solo admin
+router.delete('/:id', auth, isAdmin, EventController.cancelEvent);
 
 export default router;
