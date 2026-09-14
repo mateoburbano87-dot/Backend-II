@@ -1,3 +1,4 @@
+
 import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import UserRepository from '../repositories/userRepository.js';
@@ -5,236 +6,148 @@ import BcryptHelper from '../utils/bcryptHelper.js';
 import ValidationHelper from '../utils/validationHelper.js';
 import JwtHelper from '../utils/jwt.js';
 
-
+/**
+ * Estrategia de Registro
+ */
 passport.use(
-  'register',
-  new LocalStrategy(
-    {
-      usernameField: 'email',
-      passwordField: 'password',
-      passReqToCallback: true,
-      session: false,
-    },
-    async (req, email, password, done) => {
-      try {
-        const { first_name, last_name } = req.body;
+    'register',
+    new LocalStrategy(
+        {
+            usernameField: 'email',
+            passwordField: 'password',
+            passReqToCallback: true,
+            session: false
+        },
+        async (req, email, password, done) => {
+            try {
+                const { first_name, last_name } = req.body;
 
-        // 1. Validar campos requeridos
-        if (!first_name || !last_name) {
-          return done(null, false, { 
-            message: 'Campos requeridos faltantes: first_name, last_name' 
-          });
+                if (!first_name || !last_name) {
+                    return done(null, false, {
+                        message: 'Campos requeridos faltantes: first_name, last_name'
+                    });
+                }
+
+                if (!ValidationHelper.validateEmailFormat(email)) {
+                    return done(null, false, { message: 'Formato de email inválido' });
+                }
+
+                if (!ValidationHelper.validatePasswordLength(password, 6)) {
+                    return done(null, false, {
+                        message: 'La contraseña debe tener al menos 6 caracteres'
+                    });
+                }
+
+                const normalizedEmail = ValidationHelper.normalizeEmail(email);
+
+                const emailExists = await UserRepository.emailExists(normalizedEmail);
+                if (emailExists) {
+                    return done(null, false, { message: 'El email ya está registrado' });
+                }
+
+                const hashedPassword = await BcryptHelper.hashPassword(password);
+
+                const user = await UserRepository.create({
+                    first_name,
+                    last_name,
+                    email: normalizedEmail,
+                    password: hashedPassword,
+                    role: 'user'
+                });
+
+                return done(null, user);
+            } catch (error) {
+                return done(error);
+            }
         }
-
-        // 2. Validar formato de email
-        if (!ValidationHelper.validateEmailFormat(email)) {
-          return done(null, false, { 
-            message: 'Formato de email inválido' 
-          });
-        }
-
-        // 3. Validar longitud de contraseña
-        if (!ValidationHelper.validatePasswordLength(password, 6)) {
-          return done(null, false, { 
-            message: 'La contraseña debe tener al menos 6 caracteres' 
-          });
-        }
-
-        // 4. Normalizar email
-        const normalizedEmail = ValidationHelper.normalizeEmail(email);
-
-        // 5. Verificar si el email ya existe
-        const emailExists = await UserRepository.findEmailExists(normalizedEmail);
-        if (emailExists) {
-          return done(null, false, { 
-            message: 'El email ya está registrado' 
-          });
-        }
-
-        // 6. Hashear la contraseña
-        const hashedPassword = await BcryptHelper.hashPassword(password);
-
-        // 7. Crear el usuario
-        const userData = {
-          first_name,
-          last_name,
-          email: normalizedEmail,
-          password: hashedPassword,
-          role: 'user',
-        };
-
-        const user = await UserRepository.create(userData);
-
-        // 8. Devolver usuario sin contraseña
-        return done(null, user);
-      } catch (error) {
-        console.error('Error en estrategia register:', error);
-        return done(error);
-      }
-    }
-  )
+    )
 );
 
-
+/**
+ * Estrategia de Login
+ */
 passport.use(
-  'login',
-  new LocalStrategy(
-    {
-      usernameField: 'email',
-      passwordField: 'password',
-      session: false,
-    },
-    async (email, password, done) => {
-      try {
-        // 1. Normalizar email
-        const normalizedEmail = ValidationHelper.normalizeEmail(email);
+    'login',
+    new LocalStrategy(
+        {
+            usernameField: 'email',
+            passwordField: 'password',
+            session: false
+        },
+        async (email, password, done) => {
+            try {
+                const normalizedEmail = ValidationHelper.normalizeEmail(email);
+                const user = await UserRepository.findByEmail(normalizedEmail);
 
-        // 2. Buscar usuario por email
-        const user = await UserRepository.findByEmail(normalizedEmail);
+                if (!user) {
+                    return done(null, false, { message: 'Credenciales inválidas' });
+                }
 
-        // 3. Si no existe usuario, responder con mensaje genérico
-        if (!user) {
-          return done(null, false, { 
-            message: 'Credenciales inválidas' 
-          });
+                const isValid = await BcryptHelper.comparePassword(password, user.password);
+                if (!isValid) {
+                    return done(null, false, { message: 'Credenciales inválidas' });
+                }
+
+                await UserRepository.update(user._id, { lastLogin: new Date() });
+                return done(null, user);
+            } catch (error) {
+                return done(error);
+            }
         }
-
-        // 4. Verificar contraseña
-        const isPasswordValid = await BcryptHelper.comparePassword(
-          password,
-          user.password
-        );
-
-        // 5. Si la contraseña no coincide, mensaje genérico
-        if (!isPasswordValid) {
-          return done(null, false, { 
-            message: 'Credenciales inválidas' 
-          });
-        }
-
-        // 6. Actualizar fecha de último login
-        await UserRepository.update(user._id, { lastLogin: new Date() });
-
-        // 7. Devolver usuario autenticado
-        return done(null, user);
-      } catch (error) {
-        console.error('Error en estrategia login:', error);
-        return done(error);
-      }
-    }
-  )
+    )
 );
 
-
+/**
+ * Estrategia JWT desde cookie
+ */
 passport.use(
-  'jwt',
-  new LocalStrategy(
-    {
-      usernameField: 'token', 
-      passwordField: 'token',
-      session: false,
-      passReqToCallback: true,
-    },
-    async (req, token, _, done) => {
-      try {
-        // 1. Extraer token de la cookie
-        const tokenFromCookie = req.cookies?.currentUser;
+    'jwt',
+    new LocalStrategy(
+        {
+            usernameField: 'token',
+            passwordField: 'token',
+            session: false,
+            passReqToCallback: true
+        },
+        async (req, _token, _password, done) => {
+            try {
+                const tokenFromCookie = req.cookies?.currentUser;
+                if (!tokenFromCookie) {
+                    return done(null, false, { message: 'No autenticado' });
+                }
 
-        if (!tokenFromCookie) {
-          return done(null, false, { 
-            message: 'No autenticado' 
-          });
+                let decoded;
+                try {
+                    decoded = JwtHelper.verifyToken(tokenFromCookie);
+                } catch (error) {
+                    return done(null, false, { message: 'No autenticado' });
+                }
+
+                const user = await UserRepository.findById(decoded.id);
+                if (!user) {
+                    return done(null, false, { message: 'Usuario no encontrado' });
+                }
+
+                return done(null, user);
+            } catch (error) {
+                return done(error);
+            }
         }
-
-        // 2. Verificar el token
-        const decoded = JwtHelper.verifyToken(tokenFromCookie);
-
-        if (!decoded) {
-          return done(null, false, { 
-            message: 'Token inválido' 
-          });
-        }
-
-        // 3. Buscar usuario en la base de datos
-        const user = await UserRepository.findById(decoded.id);
-
-        if (!user) {
-          return done(null, false, { 
-            message: 'Usuario no encontrado' 
-          });
-        }
-
-        // 4. Devolver usuario autenticado
-        return done(null, user);
-      } catch (error) {
-        if (error.message === 'Token expirado' || error.message === 'Token inválido') {
-          return done(null, false, { 
-            message: 'No autenticado' 
-          });
-        }
-        console.error('Error en estrategia jwt:', error);
-        return done(error);
-      }
-    }
-  )
+    )
 );
 
-
-passport.use(
-  'jwt-header',
-  new LocalStrategy(
-    {
-      usernameField: 'token',
-      passwordField: 'token',
-      session: false,
-      passReqToCallback: true,
-    },
-    async (req, token, _, done) => {
-      try {
-        // Extraer token del header Authorization
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-          return done(null, false, { 
-            message: 'Token no proporcionado' 
-          });
-        }
-
-        const tokenFromHeader = authHeader.substring(7);
-        const decoded = JwtHelper.verifyToken(tokenFromHeader);
-
-        if (!decoded) {
-          return done(null, false, { 
-            message: 'Token inválido' 
-          });
-        }
-
-        const user = await UserRepository.findById(decoded.id);
-        if (!user) {
-          return done(null, false, { 
-            message: 'Usuario no encontrado' 
-          });
-        }
-
-        return done(null, user);
-      } catch (error) {
-        return done(error);
-      }
-    }
-  )
-);
-
-
+// Serialización (compatibilidad con sesiones si se implementan)
 passport.serializeUser((user, done) => {
-  done(null, user._id);
+    done(null, user._id);
 });
 
 passport.deserializeUser(async (id, done) => {
-  try {
-    const user = await UserRepository.findById(id);
-    done(null, user);
-  } catch (error) {
-    done(error);
-  }
+    try {
+        const user = await UserRepository.findById(id);
+        done(null, user);
+    } catch (error) {
+        done(error);
+    }
 });
 
 export default passport;
