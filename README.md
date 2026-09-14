@@ -1,42 +1,33 @@
-## 🔐 Roles y Autorización
+#  Event Platform Backend
 
-### Roles del Sistema
+API REST de la **Plataforma de Eventos e Inscripciones** desarrollada con Node.js, Express, MongoDB y Mongoose. Arquitectura profesional en capas (DAO → Repository → Service → Controller → DTO).
 
-| Rol | Descripción | Permisos |
-|-----|-------------|----------|
-| `user` | Usuario estándar | Ver eventos, registrarse |
-| `organizer` | Organizador de eventos | Crear y gestionar sus eventos |
-| `admin` | Administrador del sistema | Gestionar todo, incluyendo usuarios |
+##  Tecnologías
 
-### Matriz de Permisos
+| Tecnología | Uso |
+|------------|-----|
+| Node.js | Runtime |
+| Express.js | Framework web |
+| MongoDB + Mongoose | Base de datos |
+| Passport.js | Autenticación (estrategias) |
+| JWT | Tokens de sesión |
+| bcryptjs | Hash de contraseñas |
+| Nodemailer | Envío de emails |
+| cookie-parser | Manejo de cookies |
+| dotenv | Variables de entorno |
 
-| Acción | user | organizer | admin |
-|--------|------|-----------|-------|
-| Ver eventos | ✅ | ✅ | ✅ |
-| Ver evento por ID | ✅ | ✅ | ✅ |
-| Crear evento | ❌ | ✅ | ✅ |
-| Editar evento propio | ❌ | ✅ | ✅ |
-| Editar evento ajeno | ❌ | ❌ | ✅ |
-| Eliminar evento | ❌ | ❌ | ✅ |
-| Ver /current | ✅ | ✅ | ✅ |
-| Ruta admin | ❌ | ❌ | ✅ |
-| Ruta organizer | ❌ | ✅ | ✅ |
+# Variables de Entorno
 
-### Códigos de Error
-
-| Código | Significado | Cuándo ocurre |
-|--------|-------------|---------------|
-| 401 | No autenticado | No hay cookie/token válido |
-| 403 | Sin permisos | Autenticado pero rol no autorizado |
-
-### Rutas Protegidas
-
-| Método | Ruta | Requisito |
-|--------|------|-----------|
-| GET | `/api/sessions/current` | Autenticado (401 si no) |
-| POST | `/api/events` | organizer o admin (403 si user) |
-| PUT | `/api/events/:id` | organizer propietario o admin |
-| DELETE | `/api/events/:id` | admin |
-| GET | `/api/sessions/admin/test` | admin |
-| GET | `/api/sessions/organizer/test` | organizer o admin |
-
+Variable	Descripción	Ejemplo
+PORT	Puerto del servidor	3000
+NODE_ENV	Entorno	development
+MONGO_URL	URL de MongoDB	mongodb://localhost:27017/event-platform
+JWT_SECRET	Secreto para JWT	cambio-en-produccion
+JWT_EXPIRES_IN	Expiración del token	1h
+CORS_ORIGIN	Origen permitido	http://localhost:3000
+MAIL_HOST	Host SMTP	smtp.mailtrap.io
+MAIL_PORT	Puerto SMTP	2525
+MAIL_USER	Usuario SMTP	tu_usuario
+MAIL_PASS	Contraseña SMTP	tu_password
+MAIL_FROM	Remitente de emails	"Eventos no-reply@x.com"
+FRONTEND_URL	URL del frontend	http://localhost:3000
