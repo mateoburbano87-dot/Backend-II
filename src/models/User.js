@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 import ValidationHelper from '../utils/validationHelper.js';
 
@@ -44,26 +45,18 @@ const userSchema = new mongoose.Schema({
     lastLogin: {
         type: Date,
         default: null
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
     }
 }, {
     timestamps: true,
     toJSON: {
-        transform: function(doc, ret) {
+        transform: function (doc, ret) {
             delete ret.password;
             delete ret.__v;
             return ret;
         }
     },
     toObject: {
-        transform: function(doc, ret) {
+        transform: function (doc, ret) {
             delete ret.password;
             delete ret.__v;
             return ret;
@@ -71,17 +64,16 @@ const userSchema = new mongoose.Schema({
     }
 });
 
-// Middleware pre-save para normalizar email
-userSchema.pre('save', function(next) {
+// Normalizar email antes de guardar
+userSchema.pre('save', function (next) {
     if (this.email) {
         this.email = ValidationHelper.normalizeEmail(this.email);
     }
-    this.updatedAt = Date.now();
     next();
 });
 
-// Método para sanitizar datos del usuario
-userSchema.methods.sanitize = function() {
+// Método para devolver el usuario sin password
+userSchema.methods.sanitize = function () {
     const user = this.toObject();
     delete user.password;
     delete user.__v;
@@ -89,7 +81,7 @@ userSchema.methods.sanitize = function() {
 };
 
 // Método estático para verificar si email existe
-userSchema.statics.emailExists = async function(email) {
+userSchema.statics.emailExists = async function (email) {
     const normalizedEmail = ValidationHelper.normalizeEmail(email);
     const user = await this.findOne({ email: normalizedEmail });
     return !!user;

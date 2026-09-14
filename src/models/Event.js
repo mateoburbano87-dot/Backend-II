@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 
 const eventSchema = new mongoose.Schema({
@@ -27,7 +28,7 @@ const eventSchema = new mongoose.Schema({
         type: Date,
         required: [true, 'La fecha es requerida'],
         validate: {
-            validator: function(value) {
+            validator: function (value) {
                 return value > new Date();
             },
             message: 'La fecha del evento debe ser futura'
@@ -84,126 +85,20 @@ const eventSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Índices para mejorar el rendimiento de las consultas
+// Índices para mejorar el rendimiento
 eventSchema.index({ date: 1 });
 eventSchema.index({ category: 1 });
 eventSchema.index({ status: 1 });
 eventSchema.index({ title: 'text' });
 
-// Middleware pre-save para validar estado
-eventSchema.pre('save', function(next) {
-    // No permitir publicar eventos con fecha pasada
-    if (this.status === 'published' && this.date < new Date()) {
-        return next(new Error('No se puede publicar un evento con fecha pasada'));
-    }
-    next();
-});
-
 // Método para verificar si el evento puede ser modificado
-eventSchema.methods.canBeModified = function() {
+eventSchema.methods.canBeModified = function () {
     return this.status !== 'cancelled' && this.status !== 'finished';
 };
 
-// Método para cancelar evento
-eventSchema.methods.cancel = function() {
-    if (this.status === 'cancelled') {
-        throw new Error('El evento ya está cancelado');
-    }
-    if (this.status === 'finished') {
-        throw new Error('No se puede cancelar un evento finalizado');
-    }
-    this.status = 'cancelled';
-    return this.save();
-};
-
-// Método para publicar evento
-eventSchema.methods.publish = function() {
-    if (this.status === 'cancelled') {
-        throw new Error('No se puede publicar un evento cancelado');
-    }
-    if (this.status === 'finished') {
-        throw new Error('No se puede publicar un evento finalizado');
-    }
-    if (this.date < new Date()) {
-        throw new Error('No se puede publicar un evento con fecha pasada');
-    }
-    this.status = 'published';
-    return this.save();
-};
-
-// Método para finalizar evento
-eventSchema.methods.finish = function() {
-    if (this.status === 'cancelled') {
-        throw new Error('No se puede finalizar un evento cancelado');
-    }
-    this.status = 'finished';
-    return this.save();
-};
-
 // Método para verificar propiedad
-eventSchema.methods.isOwnedBy = function(userId) {
+eventSchema.methods.isOwnedBy = function (userId) {
     return this.organizer.toString() === userId.toString();
-};
-
-// Método estático para obtener eventos con filtros
-eventSchema.statics.getEventsWithFilters = async function(filters = {}, options = {}) {
-    const { 
-        status, 
-        category, 
-        location, 
-        dateFrom, 
-        dateTo,
-        page = 1,
-        limit = 10,
-        sort = 'date'
-    } = filters;
-
-    // Construir query
-    const query = {};
-
-    if (status) query.status = status;
-    if (category) query.category = category;
-    if (location) query.location = { $regex: location, $options: 'i' };
-    
-    if (dateFrom || dateTo) {
-        query.date = {};
-        if (dateFrom) query.date.$gte = new Date(dateFrom);
-        if (dateTo) query.date.$lte = new Date(dateTo);
-    }
-
-    // Opciones de paginación
-    const skip = (page - 1) * limit;
-
-    // Ordenamiento
-    const sortOptions = {};
-    if (sort) {
-        const sortFields = sort.split(',');
-        sortFields.forEach(field => {
-            if (field.startsWith('-')) {
-                sortOptions[field.substring(1)] = -1;
-            } else {
-                sortOptions[field] = 1;
-            }
-        });
-    }
-
-    // Ejecutar consulta
-    const [data, total] = await Promise.all([
-        this.find(query)
-            .sort(sortOptions)
-            .skip(skip)
-            .limit(limit)
-            .populate('organizer', 'first_name last_name email'),
-        this.countDocuments(query)
-    ]);
-
-    return {
-        data,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        totalPages: Math.ceil(total / limit)
-    };
 };
 
 const Event = mongoose.model('Event', eventSchema);

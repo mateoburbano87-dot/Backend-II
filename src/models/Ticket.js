@@ -35,14 +35,6 @@ const ticketSchema = new mongoose.Schema({
     cancelledAt: {
         type: Date,
         default: null
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
     }
 }, {
     timestamps: true
@@ -54,27 +46,17 @@ ticketSchema.index({ event: 1, status: 1 });
 ticketSchema.index({ reservationCode: 1 });
 
 // Método para verificar si el ticket está activo
-ticketSchema.methods.isActive = function() {
+ticketSchema.methods.isActive = function () {
     return this.status === 'confirmed' || this.status === 'pending';
 };
 
-// Método para verificar si el ticket está cancelado
-ticketSchema.methods.isCancelled = function() {
+// Método para verificar si está cancelado
+ticketSchema.methods.isCancelled = function () {
     return this.status === 'cancelled';
 };
 
-// Método para cancelar ticket
-ticketSchema.methods.cancel = function() {
-    if (this.status === 'cancelled') {
-        throw new Error('El ticket ya está cancelado');
-    }
-    this.status = 'cancelled';
-    this.cancelledAt = new Date();
-    return this.save();
-};
-
 // Método estático para generar código de reserva
-ticketSchema.statics.generateReservationCode = function() {
+ticketSchema.statics.generateReservationCode = function () {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
     for (let i = 0; i < 8; i++) {
@@ -83,8 +65,8 @@ ticketSchema.statics.generateReservationCode = function() {
     return code;
 };
 
-// Método estático para verificar si el usuario ya tiene ticket activo
-ticketSchema.statics.hasActiveTicket = async function(userId, eventId) {
+// Método estático: verificar si el usuario tiene ticket activo
+ticketSchema.statics.hasActiveTicket = async function (userId, eventId) {
     const ticket = await this.findOne({
         user: userId,
         event: eventId,
@@ -93,12 +75,12 @@ ticketSchema.statics.hasActiveTicket = async function(userId, eventId) {
     return !!ticket;
 };
 
-// Método estático para contar cupos ocupados
-ticketSchema.statics.countOccupiedSpots = async function(eventId) {
+// Método estático: contar cupos ocupados
+ticketSchema.statics.countOccupiedSpots = async function (eventId) {
     const result = await this.aggregate([
         {
             $match: {
-                event: eventId,
+                event: new mongoose.Types.ObjectId(eventId),
                 status: { $in: ['confirmed', 'pending'] }
             }
         },
