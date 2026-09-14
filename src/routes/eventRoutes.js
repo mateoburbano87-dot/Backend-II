@@ -1,7 +1,3 @@
-/**
- * Rutas de Eventos
- * CRUD completo con autorización por roles
- */
 
 import { Router } from 'express';
 import EventController from '../controllers/eventController.js';
