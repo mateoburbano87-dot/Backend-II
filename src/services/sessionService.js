@@ -1,7 +1,3 @@
-/**
- * Servicio de Sesión
- * Consume repositories
- */
 
 import UserRepository from '../repositories/userRepository.js';
 import AppError from '../utils/AppError.js';
