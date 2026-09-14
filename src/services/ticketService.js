@@ -1,4 +1,4 @@
-
+import EmailService from './emailService.js';
 import TicketRepository from '../repositories/ticketRepository.js';
 import EventRepository from '../repositories/eventRepository.js';
 import UserRepository from '../repositories/userRepository.js';
