@@ -40,32 +40,33 @@ const ticketSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Índices para mejorar el rendimiento
+// Índices
 ticketSchema.index({ user: 1, event: 1 });
 ticketSchema.index({ event: 1, status: 1 });
 ticketSchema.index({ reservationCode: 1 });
 
-// Método para verificar si el ticket está activo
+// Métodos
 ticketSchema.methods.isActive = function () {
     return this.status === 'confirmed' || this.status === 'pending';
 };
 
-// Método para verificar si está cancelado
 ticketSchema.methods.isCancelled = function () {
     return this.status === 'cancelled';
 };
 
-// Método estático para generar código de reserva
+/**
+ * Genera código de reserva con formato EVT-XXXX
+ * Ejemplo: EVT-7QK2
+ */
 ticketSchema.statics.generateReservationCode = function () {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
-    for (let i = 0; i < 8; i++) {
-        code += characters.charAt(Math.floor(Math.random() * characters.length));
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = 'EVT-';
+    for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return code;
 };
 
-// Método estático: verificar si el usuario tiene ticket activo
 ticketSchema.statics.hasActiveTicket = async function (userId, eventId) {
     const ticket = await this.findOne({
         user: userId,
@@ -75,7 +76,6 @@ ticketSchema.statics.hasActiveTicket = async function (userId, eventId) {
     return !!ticket;
 };
 
-// Método estático: contar cupos ocupados
 ticketSchema.statics.countOccupiedSpots = async function (eventId) {
     const result = await this.aggregate([
         {
