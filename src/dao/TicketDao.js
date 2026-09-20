@@ -1,66 +1,51 @@
 
-import Ticket from '../models/Ticket.js';
+import UserDto from './UserDto.js';
 
-class TicketDao {
-    async findById(id) {
-        return await Ticket.findById(id)
-            .populate('user', 'first_name last_name email')
-            .populate('event', 'title date location status capacity price');
+class TicketDto {
+    static toResponse(ticket) {
+        if (!ticket) return null;
+
+        const dto = {
+            id: ticket._id?.toString() || ticket.id,
+            status: ticket.status,
+            quantity: ticket.quantity,
+            reservationCode: ticket.reservationCode,
+            createdAt: ticket.createdAt,
+            cancelledAt: ticket.cancelledAt
+        };
+
+        // User: solo ID si no está poblado, o DTO minimal si lo está
+        if (ticket.user) {
+            if (typeof ticket.user === 'object' && ticket.user.email) {
+                dto.user = ticket.user._id?.toString();
+            } else {
+                dto.user = ticket.user.toString();
+            }
+        }
+
+        // Event: solo ID si no está poblado, o info básica si lo está
+        if (ticket.event) {
+            if (typeof ticket.event === 'object' && ticket.event.title) {
+                dto.event = ticket.event._id?.toString();
+                dto.eventDetails = {
+                    id: ticket.event._id?.toString(),
+                    title: ticket.event.title,
+                    date: ticket.event.date,
+                    location: ticket.event.location,
+                    status: ticket.event.status
+                };
+            } else {
+                dto.event = ticket.event.toString();
+            }
+        }
+
+        return dto;
     }
 
-    async findOne(filter) {
-        return await Ticket.findOne(filter);
-    }
-
-    async find(filter = {}, options = {}) {
-        const { sort = { createdAt: -1 } } = options;
-        return await Ticket.find(filter)
-            .sort(sort)
-            .populate('user', 'first_name last_name email')
-            .populate('event', 'title date location status capacity price');
-    }
-
-    async findByUser(userId) {
-        return await Ticket.find({ user: userId })
-            .populate('event', 'title date location status price')
-            .sort({ createdAt: -1 });
-    }
-
-    async findByEvent(eventId) {
-        return await Ticket.find({ event: eventId })
-            .populate('user', 'first_name last_name email')
-            .sort({ createdAt: -1 });
-    }
-
-    async create(ticketData) {
-        const ticket = new Ticket(ticketData);
-        return await ticket.save();
-    }
-
-    async update(id, updateData) {
-        return await Ticket.findByIdAndUpdate(
-            id,
-            { ...updateData, updatedAt: Date.now() },
-            { new: true, runValidators: true }
-        );
-    }
-
-    async count(filter = {}) {
-        return await Ticket.countDocuments(filter);
-    }
-
-    async sumQuantity(filter = {}) {
-        const result = await Ticket.aggregate([
-            { $match: filter },
-            { $group: { _id: null, total: { $sum: '$quantity' } } }
-        ]);
-        return result.length > 0 ? result[0].total : 0;
-    }
-
-    async exists(filter) {
-        const result = await Ticket.exists(filter);
-        return !!result;
+    static toResponseList(tickets) {
+        if (!Array.isArray(tickets)) return [];
+        return tickets.map(ticket => this.toResponse(ticket));
     }
 }
 
-export default new TicketDao();
+export default TicketDto;
