@@ -1,13 +1,33 @@
-/**
- * Controlador de Tickets
- * Solo coordina request/response. Usa DTO.
- */
 
 import TicketService from '../services/ticketService.js';
 import TicketDto from '../dto/TicketDto.js';
 import AppError from '../utils/AppError.js';
 
 class TicketController {
+    /**
+     * POST /api/events/:eid/tickets
+     * Crear ticket anidado al evento
+     */
+    async createTicketForEvent(req, res, next) {
+        try {
+            const { eid } = req.params;
+            const { quantity = 1 } = req.body;
+
+            const ticket = await TicketService.createTicket(req.user.id, eid, quantity);
+
+            res.status(201).json({
+                status: 'success',
+                payload: TicketDto.toResponse(ticket),
+                message: 'Inscripción confirmada exitosamente'
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * POST /api/tickets (compatibilidad)
+     */
     async createTicket(req, res, next) {
         try {
             const { eventId, quantity = 1 } = req.body;
@@ -39,10 +59,15 @@ class TicketController {
         }
     }
 
+    /**
+     * PATCH /api/tickets/:tid/cancel
+     * Cancela ticket (no lo elimina)
+     */
     async cancelTicket(req, res, next) {
         try {
+            const ticketId = req.params.tid || req.params.id;
             const cancelled = await TicketService.cancelTicket(
-                req.params.id,
+                ticketId,
                 req.user.id,
                 req.user.role
             );
