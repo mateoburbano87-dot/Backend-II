@@ -1,7 +1,3 @@
-/**
- * DTO de Evento
- * Filtra los datos de eventos en las respuestas
- */
 
 import UserDto from './UserDto.js';
 

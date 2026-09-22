@@ -1,6 +1,4 @@
 
-import UserDto from './UserDto.js';
-
 class TicketDto {
     static toResponse(ticket) {
         if (!ticket) return null;
